@@ -86,7 +86,18 @@ docker-compose logs -f
 
 ### Локальный запуск (для разработки)
 
-1. Установите зависимости:
+1. Настройте переменные окружения:
+```bash
+# Order Service
+cp order_service/.env.example order_service/.env
+# Отредактируйте order_service/.env при необходимости
+
+# Processor Service
+cp processor_service/.env.example processor_service/.env
+# Отредактируйте processor_service/.env при необходимости
+```
+
+2. Установите зависимости:
 ```bash
 cd order_service
 pip install -r requirements.txt
