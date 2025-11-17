@@ -36,8 +36,8 @@ async def test_full_order_flow(client: AsyncClient):
         # Проверяем публикацию события
         assert mock_publish.called
         call_args = mock_publish.call_args
-        assert call_args[0][0] == "order.created"
-        event_data = call_args[0][1]
+        assert call_args.kwargs["topic"] == "order.created"
+        event_data = call_args.kwargs["message"]
         assert event_data["order_id"] == order_id
         
         # Получаем статус заказа

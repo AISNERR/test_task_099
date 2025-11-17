@@ -33,14 +33,14 @@ async def test_create_order_publishes_kafka_event(client: AsyncClient):
         
         # Проверяем, что событие было опубликовано
         assert mock_publish.called
-        service_module.kafka_producer._producer = None
         call_args = mock_publish.call_args
-        
+        service_module.kafka_producer._producer = None
+    
         # Проверяем топик
-        assert call_args[0][0] == "order.created"
-        
+        assert call_args.kwargs["topic"] == "order.created"
+    
         # Проверяем содержимое события
-        event_data = call_args[0][1]
+        event_data = call_args.kwargs["message"]
         assert event_data["order_id"] == order_id
         assert event_data["customer_id"] == "customer_kafka_123"
         assert event_data["total_amount"] == 1000.00
