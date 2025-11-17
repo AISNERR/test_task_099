@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from order_service.api.routes import router
 from order_service.infrastructure.database import init_db, close_db
+from order_service.infrastructure.kafka_client import kafka_producer
 
 
 @asynccontextmanager
@@ -12,8 +13,10 @@ async def lifespan(app: FastAPI):
     """Управление жизненным циклом приложения"""
     # Инициализация при старте
     await init_db()
+    await kafka_producer.start()
     yield
     # Очистка при остановке
+    await kafka_producer.stop()
     await close_db()
 
 
