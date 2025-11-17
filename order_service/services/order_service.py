@@ -58,9 +58,16 @@ class OrderService:
             )
             logger.info(f"Order created event published for order {order.id}")
         except Exception as e:
-            # Логируем ошибку, но не прерываем создание заказа
-            # В продакшене можно добавить dead letter queue
             logger.error(f"Failed to publish order.created event after retries: {e}")
+            try:
+                await kafka_producer.publish_to_dlq(
+                    settings.order_dlq_topic,
+                    settings.order_created_topic,
+                    json.loads(event.json()),
+                    str(e),
+                )
+            except Exception as dlq_error:
+                logger.error(f"Failed to route message to DLQ: {dlq_error}")
         
         return OrderResponse(
             order_id=order.id,

@@ -89,6 +89,7 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       ORDER_CREATED_TOPIC: order.created
       ORDER_PROCESSED_TOPIC: order.processed
+      ORDER_DLQ_TOPIC: order.dlq
       SERVICE_NAME: order_service
       DEBUG: "false"
     volumes:
@@ -118,6 +119,7 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       ORDER_CREATED_TOPIC: order.created
       ORDER_PROCESSED_TOPIC: order.processed
+      PROCESSOR_DLQ_TOPIC: processor.dlq
       SERVICE_NAME: processor_service
       DEBUG: "false"
     volumes:

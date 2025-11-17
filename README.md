@@ -90,11 +90,11 @@ docker-compose logs -f
 ```bash
 # Order Service
 cp order_service/.env.example order_service/.env
-# В .env укажите PG_HOST, PG_PORT, PG_USER, PG_PASSWORD, PG_DB и Kafka настройки
+# В .env укажите PG_HOST, PG_PORT, PG_USER, PG_PASSWORD, PG_DB, Kafka настройки и ORDER_DLQ_TOPIC
 
 # Processor Service
 cp processor_service/.env.example processor_service/.env
-# Аналогично задайте PG_* и Kafka параметры
+# Аналогично задайте PG_* , Kafka параметры и PROCESSOR_DLQ_TOPIC
 ```
 
 2. Установите зависимости:
@@ -294,11 +294,19 @@ alembic downgrade -1
 - Обработки событий из Kafka (3 попытки)
 - Обновления статусов заказов (3 попытки)
 
-### Обработка ошибок
+### Обработка ошибок и DLQ
 
 - Все ошибки логируются с полным контекстом
 - При неудачной публикации события заказ все равно создается (eventual consistency)
-- В продакшене рекомендуется добавить Dead Letter Queue для сообщений, которые не удалось обработать после всех retry
+- Dead Letter Queue реализована на отдельных Kafka-топиках:
+  - `order.dlq` — сообщения, которые Order Service не смог отправить в `order.created`
+  - `processor.dlq` — сообщения, которые Processor Service не смог отправить в `order.processed`
+- Сообщение в DLQ содержит исходный топик, исходное тело, текст ошибки и timestamp.
+- Просмотр DLQ:
+  ```bash
+  docker-compose exec kafka kafka-console-consumer --bootstrap-server kafka:9092 --topic order.dlq
+  docker-compose exec kafka kafka-console-consumer --bootstrap-server kafka:9092 --topic processor.dlq
+  ```
 
 ### Транзакционность
 

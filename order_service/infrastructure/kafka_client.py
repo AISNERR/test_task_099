@@ -3,6 +3,7 @@
 """
 import json
 import logging
+from datetime import datetime
 from typing import Optional
 from aiokafka import AIOKafkaProducer, AIOKafkaConsumer
 from order_service.settings import settings
@@ -48,6 +49,32 @@ class KafkaProducer:
         except Exception as e:
             logger.error(f"Failed to publish message to {topic}: {e}")
             raise
+
+    async def publish_to_dlq(
+        self,
+        topic: str,
+        original_topic: str,
+        message: dict,
+        error: str,
+    ):
+        """Публикация сообщения в DLQ"""
+        payload = {
+            "original_topic": original_topic,
+            "error": error,
+            "message": message,
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+        if not self._producer:
+            raise RuntimeError("Producer not started")
+        try:
+            await self._producer.send_and_wait(topic, payload)
+            logger.warning(
+                "Message routed to DLQ %s due to error: %s", topic, error
+            )
+        except Exception as dlq_error:
+            logger.error(
+                "Failed to publish message to DLQ %s: %s", topic, dlq_error
+            )
 
 
 class KafkaConsumer:

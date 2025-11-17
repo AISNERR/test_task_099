@@ -96,7 +96,15 @@ class ProcessorService:
             logger.info(f"Order processed event published for order {event.order_id}")
         except Exception as e:
             logger.error(f"Failed to publish order.processed event after retries: {e}")
-            # В продакшене можно добавить dead letter queue
+            try:
+                await kafka_producer.publish_to_dlq(
+                    settings.processor_dlq_topic,
+                    settings.order_processed_topic,
+                    json.loads(processed_event.json()),
+                    str(e),
+                )
+            except Exception as dlq_error:
+                logger.error(f"Failed to route processed message to DLQ: {dlq_error}")
         
         return processed_event
 

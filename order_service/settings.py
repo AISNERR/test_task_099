@@ -28,6 +28,7 @@ class Settings:
         self.order_processed_topic = os.getenv(
             "ORDER_PROCESSED_TOPIC", "order.processed"
         )
+        self.order_dlq_topic = os.getenv("ORDER_DLQ_TOPIC", "order.dlq")
 
         # Service
         self.service_name = os.getenv("SERVICE_NAME", "order_service")
