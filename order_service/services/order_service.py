@@ -2,7 +2,7 @@
 Сервисный слой для работы с заказами
 """
 from order_service.domain.models import CreateOrderRequest, OrderResponse, OrderItem
-from order_service.domain.events import OrderCreatedEvent, OrderItemEvent
+from order_service.domain.events import OrderCreatedEvent, OrderItemEvent, OrderProcessedEvent
 from order_service.infrastructure.models import Order
 from order_service.infrastructure.kafka_client import kafka_producer
 from order_service.settings import settings
@@ -93,4 +93,28 @@ class OrderService:
             total_amount=order.total_amount,
             status=order.status
         )
+    
+    @staticmethod
+    async def update_order_status(event: OrderProcessedEvent):
+        """
+        Обновление статуса заказа на основе события обработки
+        
+        Args:
+            event: Событие обработки заказа
+        """
+        try:
+            order = await Order.objects.get(id=event.order_id)
+            
+            # Обновляем статус заказа
+            if event.status == "success":
+                order.status = "processed"
+            elif event.status == "failed":
+                order.status = "failed"
+            
+            await order.update()
+            logger.info(f"Order {event.order_id} status updated to {order.status}")
+            
+        except Exception as e:
+            logger.error(f"Failed to update order status for {event.order_id}: {e}")
+            # В продакшене можно добавить retry или dead letter queue
 
