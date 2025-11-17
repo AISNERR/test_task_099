@@ -1,26 +1,37 @@
-from pydantic_settings import BaseSettings
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
-class Settings(BaseSettings):
+class Settings:
     """Настройки Order сервиса"""
-    
-    # Database
-    database_url: str = "postgresql+asyncpg://order_user:order_password@localhost:5432/order_db"
-    
-    # Message Broker (Kafka)
-    kafka_bootstrap_servers: str = "localhost:9092"
-    order_created_topic: str = "order.created"
-    order_processed_topic: str = "order.processed"
-    
-    # Service
-    service_name: str = "order_service"
-    debug: bool = False
-    
-    class Config:
-        env_file = ".env"
-        case_sensitive = False
-        # Позволяем переопределять через переменные окружения
-        env_prefix = ""
+
+    def __init__(self):
+        # Database
+        self.pg_host = os.getenv("PG_HOST", "localhost")
+        self.pg_port = int(os.getenv("PG_PORT", 5432))
+        self.pg_user = os.getenv("PG_USER", "order_user")
+        self.pg_password = os.getenv("PG_PASSWORD", "order_password")
+        self.pg_db = os.getenv("PG_DB", "order_db")
+        default_db_url = (
+            f"postgresql+asyncpg://{self.pg_user}:{self.pg_password}"
+            f"@{self.pg_host}:{self.pg_port}/{self.pg_db}"
+        )
+        self.database_url = os.getenv("DATABASE_URL", default_db_url)
+
+        # Message Broker (Kafka)
+        self.kafka_bootstrap_servers = os.getenv(
+            "KAFKA_BOOTSTRAP_SERVERS", "localhost:9092"
+        )
+        self.order_created_topic = os.getenv("ORDER_CREATED_TOPIC", "order.created")
+        self.order_processed_topic = os.getenv(
+            "ORDER_PROCESSED_TOPIC", "order.processed"
+        )
+
+        # Service
+        self.service_name = os.getenv("SERVICE_NAME", "order_service")
+        self.debug = os.getenv("DEBUG", "false").lower() == "true"
 
 
 settings = Settings()

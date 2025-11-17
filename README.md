@@ -90,11 +90,11 @@ docker-compose logs -f
 ```bash
 # Order Service
 cp order_service/.env.example order_service/.env
-# Отредактируйте order_service/.env при необходимости
+# В .env укажите PG_HOST, PG_PORT, PG_USER, PG_PASSWORD, PG_DB и Kafka настройки
 
 # Processor Service
 cp processor_service/.env.example processor_service/.env
-# Отредактируйте processor_service/.env при необходимости
+# Аналогично задайте PG_* и Kafka параметры
 ```
 
 2. Установите зависимости:

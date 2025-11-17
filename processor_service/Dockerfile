@@ -6,12 +6,15 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Копирование кода
-COPY . .
+# Копирование кода внутрь пакета processor_service
+COPY . /app/processor_service
 
 # Переменные окружения
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
+
+# Рабочая директория приложения
+WORKDIR /app
 
 # Порт для FastAPI
 EXPOSE 8001

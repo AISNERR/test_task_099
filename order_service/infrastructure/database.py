@@ -1,34 +1,35 @@
 """
 Настройка подключения к базе данных
 """
+from databases import Database
 from sqlalchemy import MetaData
+from sqlalchemy.ext.asyncio import create_async_engine
+from ormar import ModelMeta
 from order_service.settings import settings
 
-# Создаем metadata для ormar
 metadata = MetaData()
+database = Database(settings.database_url)
 
-# Базовый Meta для ormar моделей
-class BaseMeta:
+
+class BaseMeta(ModelMeta):
     """Базовый Meta класс для всех моделей"""
-    database = settings.database_url
+    database = database
     metadata = metadata
 
 
 async def init_db():
-    """Инициализация БД - создание таблиц"""
-    from order_service.infrastructure.models import Order, OrderItem as OrderItemModel
-    from sqlalchemy.ext.asyncio import create_async_engine
-    
+    """Инициализация БД и подключение"""
     engine = create_async_engine(settings.database_url)
-    
     async with engine.begin() as conn:
         await conn.run_sync(metadata.create_all)
-    
     await engine.dispose()
+
+    if not database.is_connected:
+        await database.connect()
 
 
 async def close_db():
-    """Закрытие соединений с БД"""
-    # Ormar управляет соединениями автоматически
-    pass
+    """Закрытие соединения с БД"""
+    if database.is_connected:
+        await database.disconnect()
 

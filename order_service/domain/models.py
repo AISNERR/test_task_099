@@ -2,7 +2,7 @@
 Доменные модели для Order сервиса
 """
 from typing import List
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, conlist
 
 
 class OrderItem(BaseModel):
@@ -14,7 +14,7 @@ class OrderItem(BaseModel):
 class CreateOrderRequest(BaseModel):
     """Запрос на создание заказа"""
     customer_id: str = Field(..., description="ID клиента")
-    items: List[OrderItem] = Field(..., min_length=1, description="Список товаров")
+    items: conlist(OrderItem, min_items=1) = Field(..., description="Список товаров")
     total_amount: float = Field(..., gt=0, description="Общая сумма заказа")
 
 

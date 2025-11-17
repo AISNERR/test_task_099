@@ -26,7 +26,7 @@ class OrderService:
             OrderResponse с информацией о созданном заказе
         """
         # Преобразуем items в список словарей для сохранения в JSON поле
-        items_dict = [item.model_dump() for item in order_data.items]
+        items_dict = [item.dict() for item in order_data.items]
         
         # Создаем заказ в БД
         order = await Order.objects.create(
@@ -53,7 +53,7 @@ class OrderService:
                 backoff=2.0,
                 exceptions=(Exception,),
                 topic=settings.order_created_topic,
-                message=event.model_dump()
+                message=event.dict()
             )
             logger.info(f"Order created event published for order {order.id}")
         except Exception as e:
