@@ -20,6 +20,11 @@ class OrderCreatedEvent(BaseModel):
     total_amount: float = Field(..., description="Общая сумма заказа")
     created_at: datetime = Field(default_factory=datetime.utcnow, description="Время создания")
 
+    class Config:
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }
+
 
 class OrderProcessedEvent(BaseModel):
     """Событие обработки заказа"""
@@ -27,4 +32,9 @@ class OrderProcessedEvent(BaseModel):
     status: str = Field(..., description="Статус обработки (success/failed)")
     error_message: str = Field(default="", description="Сообщение об ошибке, если есть")
     processed_at: datetime = Field(default_factory=datetime.utcnow, description="Время обработки")
+
+    class Config:
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }
 

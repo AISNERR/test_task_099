@@ -1,12 +1,13 @@
 """
 Сервисный слой для работы с заказами
 """
+import logging
+import json
 from order_service.domain.models import CreateOrderRequest, OrderResponse, OrderItem
 from order_service.domain.events import OrderCreatedEvent, OrderItemEvent, OrderProcessedEvent
 from order_service.infrastructure.models import Order
 from order_service.infrastructure.kafka_client import kafka_producer
 from order_service.settings import settings
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +54,7 @@ class OrderService:
                 backoff=2.0,
                 exceptions=(Exception,),
                 topic=settings.order_created_topic,
-                message=event.dict()
+                message=json.loads(event.json())
             )
             logger.info(f"Order created event published for order {order.id}")
         except Exception as e:

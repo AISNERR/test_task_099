@@ -3,6 +3,7 @@
 """
 import random
 import logging
+import json
 from datetime import datetime
 from processor_service.domain.events import OrderCreatedEvent, OrderProcessedEvent
 from processor_service.infrastructure.models import OrderProcessing
@@ -27,7 +28,7 @@ class ProcessorService:
             OrderProcessedEvent с результатом обработки
         """
         # Сохраняем заказ в БД для отслеживания состояния
-        items_dict = [item.model_dump() for item in event.items]
+        items_dict = [item.dict() for item in event.items]
         
         # Проверяем, не обрабатывался ли уже этот заказ (идемпотентность)
         # Используем уникальный индекс на order_id для гарантии идемпотентности
@@ -90,7 +91,7 @@ class ProcessorService:
                 backoff=2.0,
                 exceptions=(Exception,),
                 topic=settings.order_processed_topic,
-                message=processed_event.model_dump()
+                message=json.loads(processed_event.json())
             )
             logger.info(f"Order processed event published for order {event.order_id}")
         except Exception as e:
