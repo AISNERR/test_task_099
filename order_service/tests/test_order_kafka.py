@@ -23,7 +23,9 @@ async def test_create_order_publishes_kafka_event(client: AsyncClient):
         "total_amount": 1000.00
     }
     
-    with patch('order_service.infrastructure.kafka_client.kafka_producer.publish') as mock_publish:
+    from order_service.services import order_service as service_module
+    with patch('order_service.services.order_service.kafka_producer.publish', return_value=None) as mock_publish:
+        service_module.kafka_producer._producer = object()
         response = await client.post("/orders", json=order_data)
         
         assert response.status_code == 201
@@ -31,6 +33,7 @@ async def test_create_order_publishes_kafka_event(client: AsyncClient):
         
         # Проверяем, что событие было опубликовано
         assert mock_publish.called
+        service_module.kafka_producer._producer = None
         call_args = mock_publish.call_args
         
         # Проверяем топик

@@ -24,7 +24,9 @@ async def test_full_order_flow(client: AsyncClient):
         "total_amount": 2000.00
     }
     
-    with patch('order_service.infrastructure.kafka_client.kafka_producer.publish') as mock_publish:
+    from order_service.services import order_service as service_module
+    with patch('order_service.services.order_service.kafka_producer.publish', return_value=None) as mock_publish:
+        service_module.kafka_producer._producer = object()
         # Создаем заказ
         create_response = await client.post("/orders", json=order_data)
         assert create_response.status_code == 201
@@ -46,6 +48,7 @@ async def test_full_order_flow(client: AsyncClient):
         assert data["order_id"] == order_id
         assert data["status"] == "created"
         assert data["customer_id"] == "customer_integration_123"
+        service_module.kafka_producer._producer = None
 
 
 @pytest.mark.asyncio
@@ -73,7 +76,6 @@ async def test_order_status_after_processing(client: AsyncClient):
         order_id=order_id,
         status="success",
         error_message="",
-        processed_at=None
     )
     
     await OrderService.update_order_status(processed_event)
