@@ -81,13 +81,14 @@ class OrderService:
             OrderResponse с информацией о заказе
             
         Raises:
-            HTTPException: Если заказ не найден
+            OrderNotFoundError: Если заказ не найден
         """
         try:
             order = await Order.objects.get(id=order_id)
-        except Exception:
-            from fastapi import HTTPException
-            raise HTTPException(status_code=404, detail="Order not found")
+        except Exception as e:
+            from order_service.api.exceptions import OrderNotFoundError
+            logger.debug(f"Order {order_id} not found: {e}")
+            raise OrderNotFoundError(order_id)
         
         # Преобразуем items из JSON обратно в Pydantic модели
         items = [OrderItem(**item) for item in order.items]
