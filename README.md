@@ -341,5 +341,5 @@ Health check endpoints доступны на:
 8. **Шардирование** - для масштабирования БД
 
 ## Контакты
-
-Для вопросов и предложений создайте issue в репозитории.
+Misha Aisner
+southeast21k@gmail.com Misha Aisner
