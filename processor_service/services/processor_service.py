@@ -30,9 +30,10 @@ class ProcessorService:
         items_dict = [item.model_dump() for item in event.items]
         
         # Проверяем, не обрабатывался ли уже этот заказ (идемпотентность)
+        # Используем уникальный индекс на order_id для гарантии идемпотентности
         try:
             existing = await OrderProcessing.objects.get(order_id=event.order_id)
-            logger.info(f"Order {event.order_id} already processed, returning existing result")
+            logger.info(f"Order {event.order_id} already processed (idempotency check), returning existing result")
             return OrderProcessedEvent(
                 order_id=existing.order_id,
                 status=existing.status,
@@ -79,16 +80,22 @@ class ProcessorService:
             processed_at=datetime.utcnow()
         )
         
-        # Публикуем событие order.processed в Kafka
+        # Публикуем событие order.processed в Kafka с retry
         try:
-            await kafka_producer.publish(
+            from processor_service.infrastructure.retry import retry_async
+            await retry_async(
+                kafka_producer.publish,
+                max_attempts=3,
+                delay=1.0,
+                backoff=2.0,
+                exceptions=(Exception,),
                 topic=settings.order_processed_topic,
                 message=processed_event.model_dump()
             )
             logger.info(f"Order processed event published for order {event.order_id}")
         except Exception as e:
-            logger.error(f"Failed to publish order.processed event: {e}")
-            # В продакшене можно добавить retry механизм
+            logger.error(f"Failed to publish order.processed event after retries: {e}")
+            # В продакшене можно добавить dead letter queue
         
         return processed_event
 

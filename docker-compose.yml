@@ -1,0 +1,134 @@
+version: '3.8'
+
+services:
+  # PostgreSQL для Order Service
+  order_db:
+    image: postgres:15-alpine
+    container_name: order_db
+    environment:
+      POSTGRES_USER: order_user
+      POSTGRES_PASSWORD: order_password
+      POSTGRES_DB: order_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - order_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U order_user -d order_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # PostgreSQL для Processor Service
+  processor_db:
+    image: postgres:15-alpine
+    container_name: processor_db
+    environment:
+      POSTGRES_USER: processor_user
+      POSTGRES_PASSWORD: processor_password
+      POSTGRES_DB: processor_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - processor_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U processor_user -d processor_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Kafka
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Order Service
+  order_service:
+    build:
+      context: ./order_service
+      dockerfile: Dockerfile
+    container_name: order_service
+    depends_on:
+      order_db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://order_user:order_password@order_db:5432/order_db
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      ORDER_CREATED_TOPIC: order.created
+      ORDER_PROCESSED_TOPIC: order.processed
+      SERVICE_NAME: order_service
+      DEBUG: "false"
+    volumes:
+      - ./order_service:/app
+    command: >
+      sh -c "
+        echo 'Waiting for Kafka to be ready...' &&
+        sleep 10 &&
+        uvicorn order_service.main:app --host 0.0.0.0 --port 8000 --reload
+      "
+
+  # Processor Service
+  processor_service:
+    build:
+      context: ./processor_service
+      dockerfile: Dockerfile
+    container_name: processor_service
+    depends_on:
+      processor_db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    ports:
+      - "8001:8001"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://processor_user:processor_password@processor_db:5432/processor_db
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      ORDER_CREATED_TOPIC: order.created
+      ORDER_PROCESSED_TOPIC: order.processed
+      SERVICE_NAME: processor_service
+      DEBUG: "false"
+    volumes:
+      - ./processor_service:/app
+    command: >
+      sh -c "
+        echo 'Waiting for Kafka to be ready...' &&
+        sleep 10 &&
+        uvicorn processor_service.main:app --host 0.0.0.0 --port 8001 --reload
+      "
+
+volumes:
+  order_db_data:
+  processor_db_data:
+

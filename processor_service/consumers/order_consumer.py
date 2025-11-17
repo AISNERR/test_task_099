@@ -48,12 +48,20 @@ class OrderCreatedConsumer:
                     event = OrderCreatedEvent(**message)
                     logger.info(f"Received order.created event for order {event.order_id}")
                     
-                    # Обрабатываем заказ
-                    await ProcessorService.process_order(event)
+                    # Обрабатываем заказ с retry
+                    from processor_service.infrastructure.retry import retry_async
+                    await retry_async(
+                        ProcessorService.process_order,
+                        max_attempts=3,
+                        delay=1.0,
+                        backoff=2.0,
+                        exceptions=(Exception,),
+                        event=event
+                    )
                     
                 except Exception as e:
-                    logger.error(f"Error processing order.created event: {e}", exc_info=True)
-                    # В продакшене здесь можно добавить retry механизм или dead letter queue
+                    logger.error(f"Error processing order.created event after retries: {e}", exc_info=True)
+                    # В продакшене здесь можно добавить dead letter queue
                     
         except Exception as e:
             logger.error(f"Error in consume loop: {e}", exc_info=True)

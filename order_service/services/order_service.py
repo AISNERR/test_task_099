@@ -36,7 +36,7 @@ class OrderService:
             status="created"
         )
         
-        # Публикуем событие order.created в Kafka
+        # Публикуем событие order.created в Kafka с retry
         try:
             event = OrderCreatedEvent(
                 order_id=order.id,
@@ -45,15 +45,21 @@ class OrderService:
                 total_amount=order.total_amount
             )
             
-            await kafka_producer.publish(
+            from order_service.infrastructure.retry import retry_async
+            await retry_async(
+                kafka_producer.publish,
+                max_attempts=3,
+                delay=1.0,
+                backoff=2.0,
+                exceptions=(Exception,),
                 topic=settings.order_created_topic,
                 message=event.model_dump()
             )
             logger.info(f"Order created event published for order {order.id}")
         except Exception as e:
             # Логируем ошибку, но не прерываем создание заказа
-            # В продакшене можно добавить retry механизм или dead letter queue
-            logger.error(f"Failed to publish order.created event: {e}")
+            # В продакшене можно добавить dead letter queue
+            logger.error(f"Failed to publish order.created event after retries: {e}")
         
         return OrderResponse(
             order_id=order.id,
